@@ -1,0 +1,33 @@
+Software Engineer - Full Stack
+TechCorp Inc.
+
+We are looking for a talented Full Stack Software Engineer to join our growing team.
+
+Requirements:
+- 3+ years of experience in software development
+- Proficiency in Python, JavaScript, and React
+- Experience with cloud platforms (AWS preferred)
+- Strong problem-solving skills
+- Team player with excellent communication skills
+- Experience with Agile development methodologies
+- Knowledge of database design and SQL
+- Familiarity with Git and version control
+
+Responsibilities:
+- Develop and maintain web applications
+- Collaborate with cross-functional teams
+- Write clean, maintainable code
+- Participate in code reviews
+- Contribute to technical architecture decisions
+- Mentor junior developers
+
+We offer:
+- Competitive salary and equity
+- Health, dental, and vision insurance
+- 401(k) with company match
+- Flexible work arrangements
+- Professional development opportunities
+- Fast-paced startup environment
+- Opportunities for growth and learning
+
+Location: Remote/Hybrid (San Francisco, CA preferred)

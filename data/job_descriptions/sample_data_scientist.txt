@@ -1,0 +1,32 @@
+Senior Data Scientist
+DataFlow Analytics
+
+We are seeking a Senior Data Scientist to join our innovative team and help drive data-driven decision making.
+
+Requirements:
+- 5+ years of experience in data science or machine learning
+- Advanced degree in Computer Science, Statistics, or related field
+- Proficiency in Python, R, and SQL
+- Experience with machine learning frameworks (TensorFlow, PyTorch, scikit-learn)
+- Strong statistical analysis skills
+- Experience with big data technologies (Spark, Hadoop)
+- Excellent communication and presentation skills
+- Experience leading data science projects
+
+Responsibilities:
+- Develop and deploy machine learning models
+- Analyze large datasets to extract insights
+- Collaborate with business stakeholders
+- Present findings to technical and non-technical audiences
+- Mentor junior data scientists
+- Contribute to data strategy and architecture
+
+We offer:
+- Competitive salary with equity
+- Comprehensive health benefits
+- Flexible work environment
+- Professional development budget
+- Collaborative and innovative culture
+- Opportunities to work on cutting-edge AI projects
+
+Location: Hybrid (New York, NY)

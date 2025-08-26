@@ -7,23 +7,20 @@ import os
 from crewai import Agent
 from langchain_community.llms import Ollama
 
-def get_ollama_llm(model_name: str = "gemma3:1b"):
+def get_ollama_llm(model_name: str = "ollama/deepseek-r1:1.5b"):
     """
     Get an Ollama LLM instance for use with CrewAI agents.
     
     Args:
-        model_name (str): Name of the Ollama model to use
+        model_name (str): Name of the Ollama model to use (should include 'ollama/' prefix)
         
     Returns:
-        Ollama: Configured Ollama LLM instance
+        Ollama: Configured LangChain Ollama LLM instance
     """
     try:
         llm = Ollama(
             model=model_name,
-            base_url="http://localhost:11434",  # Default Ollama URL
-            temperature=0.7,
-            top_p=0.9,
-            repeat_penalty=1.1
+            base_url="http://localhost:11434"  # Default Ollama URL
         )
         return llm
     except Exception as e:
@@ -61,10 +58,10 @@ def create_agent_with_ollama(role: str, goal: str, backstory: str, tools=None, v
 
 # Available models for reference
 AVAILABLE_MODELS = [
-    "deepseek-r1:1.5b",      # 1.5B parameter model - good for basic tasks
-    "all-minilm:latest",     # 45MB model - very fast but limited capability
-    "nomic-embed-text:latest", # 274MB embedding model
-    "mxbai-embed-large:latest" # 669MB embedding model
+    "ollama/deepseek-r1:1.5b",      # 1.5B parameter model - good for basic tasks
+    "ollama/all-minilm:latest",     # 45MB model - very fast but limited capability
+    "ollama/nomic-embed-text:latest", # 274MB embedding model
+    "ollama/mxbai-embed-large:latest" # 669MB embedding model
 ]
 
 def list_available_models():

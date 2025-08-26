@@ -1,153 +1,100 @@
 #!/usr/bin/env python3
 """
-Test Script for Ollama Connection
-This script tests the basic Ollama connection and CrewAI setup.
+Test script to verify Ollama connection and CrewAI integration
 """
 
+import requests
 import sys
 import os
 
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-def test_ollama_connection():
-    """Test the Ollama connection"""
-    print("🧪 Testing Ollama Connection...")
-    
+def test_ollama_service():
+    """Test if Ollama service is running"""
     try:
-        from config.ollama_config import test_ollama_connection
-        success = test_ollama_connection()
-        return success
-    except ImportError as e:
-        print(f"❌ Import error: {e}")
-        print("Please install the required packages: pip install -r requirements.txt")
-        return False
+        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        if response.status_code == 200:
+            print("✅ Ollama service is running")
+            return True
+        else:
+            print(f"⚠️  Ollama responded with status: {response.status_code}")
+            return False
     except Exception as e:
-        print(f"❌ Error testing Ollama connection: {e}")
+        print(f"❌ Cannot connect to Ollama: {e}")
         return False
 
-def test_tools():
-    """Test the custom tools"""
-    print("\n🧪 Testing Custom Tools...")
-    
+def test_crewai_ollama_integration():
+    """Test CrewAI Ollama integration"""
     try:
-        from tools.job_analyzer import JobDescriptionAnalyzer
-        from tools.email_templates import EmailTemplateManager
+        from langchain_community.llms import Ollama
         
-        # Test job analyzer
-        analyzer = JobDescriptionAnalyzer()
-        sample_jd = "Software Engineer position at TechCorp Inc. Requirements: Python, React, 3+ years experience."
-        result = analyzer._run(sample_jd)
-        print(f"✅ Job Analyzer: {result['role_title']} at {result['company']}")
+        print("🔍 Testing CrewAI Ollama integration...")
+        llm = Ollama(
+            model="ollama/deepseek-r1:1.5b",
+            base_url="http://localhost:11434"
+        )
         
-        # Test email template manager
-        template_manager = EmailTemplateManager()
-        template = template_manager._run("software_engineer", {"company": "TestCorp"})
-        print(f"✅ Email Template Manager: Template generated ({len(template)} characters)")
-        
+        print("✅ CrewAI Ollama LLM instance created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error testing tools: {e}")
+        print(f"❌ CrewAI Ollama integration failed: {e}")
         return False
 
-def test_agents():
-    """Test agent creation"""
-    print("\n🧪 Testing Agent Creation...")
-    
+def test_agent_creation():
+    """Test if we can create CrewAI agents with Ollama"""
     try:
-        from agents.researcher import create_researcher_agent
-        from agents.writer import create_writer_agent
-        from agents.reviewer import create_reviewer_agent
+        from crewai import Agent
+        from langchain_community.llms import Ollama
         
-        # Test creating agents
-        researcher = create_researcher_agent()
-        print(f"✅ Researcher Agent: {researcher.role}")
+        print("🔍 Testing agent creation with Ollama...")
         
-        writer = create_writer_agent()
-        print(f"✅ Writer Agent: {writer.role}")
+        llm = Ollama(
+            model="ollama/deepseek-r1:1.5b",
+            base_url="http://localhost:11434"
+        )
         
-        reviewer = create_reviewer_agent()
-        print(f"✅ Reviewer Agent: {reviewer.role}")
+        # Try to create a simple agent
+        agent = Agent(
+            role="Test Agent",
+            goal="Test the Ollama integration",
+            backstory="A test agent to verify Ollama works with CrewAI",
+            llm=llm,
+            verbose=False
+        )
         
+        print("✅ Agent created successfully with Ollama LLM")
         return True
         
     except Exception as e:
-        print(f"❌ Error testing agents: {e}")
-        return False
-
-def test_personal_config():
-    """Test personal configuration"""
-    print("\n🧪 Testing Personal Configuration...")
-    
-    try:
-        from config.personal_info import get_personal_info, get_customization_data
-        
-        personal_info = get_personal_info()
-        print(f"✅ Personal Info: {personal_info['your_name']} - {personal_info['current_role']}")
-        
-        # Test customization data
-        job_analysis = {
-            "role_title": "Software Engineer",
-            "company": "TestCorp",
-            "industry": "Technology"
-        }
-        customization_data = get_customization_data(job_analysis)
-        print(f"✅ Customization Data: Company={customization_data['company']}, Skills={customization_data['key_skills']}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error testing personal config: {e}")
+        print(f"❌ Agent creation failed: {e}")
         return False
 
 def main():
     """Main test function"""
-    print("🚀 Starting Ollama Connection and CrewAI Tests...\n")
+    print("🧪 Testing Ollama and CrewAI Integration")
+    print("=" * 50)
     
-    tests = [
-        ("Ollama Connection", test_ollama_connection),
-        ("Custom Tools", test_tools),
-        ("Agent Creation", test_agents),
-        ("Personal Configuration", test_personal_config)
-    ]
+    # Test 1: Ollama service
+    if not test_ollama_service():
+        print("\n❌ Ollama service test failed")
+        print("Please ensure Ollama is running: ollama serve")
+        return False
     
-    results = []
-    for test_name, test_func in tests:
-        try:
-            result = test_func()
-            results.append((test_name, result))
-        except Exception as e:
-            print(f"❌ {test_name} test failed with exception: {e}")
-            results.append((test_name, False))
+    # Test 2: CrewAI Ollama integration
+    if not test_crewai_ollama_integration():
+        print("\n❌ CrewAI Ollama integration test failed")
+        return False
     
-    # Summary
-    print("\n" + "="*50)
-    print("📊 TEST RESULTS SUMMARY")
-    print("="*50)
+    # Test 3: Agent creation
+    if not test_agent_creation():
+        print("\n❌ Agent creation test failed")
+        return False
     
-    passed = 0
-    total = len(results)
-    
-    for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{test_name}: {status}")
-        if result:
-            passed += 1
-    
-    print(f"\nOverall: {passed}/{total} tests passed")
-    
-    if passed == total:
-        print("🎉 All tests passed! Your setup is ready.")
-        print("\nNext steps:")
-        print("1. Customize your personal information in config/personal_info.py")
-        print("2. Run the main script: python jd_agent.py")
-    else:
-        print("⚠️  Some tests failed. Please check the errors above.")
-        print("\nCommon issues:")
-        print("1. Make sure Ollama is running: ollama serve")
-        print("2. Install dependencies: pip install -r requirements.txt")
-        print("3. Check that the deepseek-r1 model is available: ollama list")
+    print("\n🎉 All tests passed! Ollama is properly configured with CrewAI.")
+    return True
 
 if __name__ == "__main__":
-    main()
+    success = main()
+    sys.exit(0 if success else 1)

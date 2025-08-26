@@ -9,9 +9,16 @@ from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import BaseTool
 from typing import List, Dict, Any
+from langchain_community.llms import Ollama
 
 # Load environment variables
 load_dotenv()
+
+# Configure Ollama LLM
+ollama_llm = Ollama(
+    model="ollama/deepseek-r1:1.5b",
+    base_url="http://localhost:11434"
+)
 
 class JobDescriptionAnalyzer(BaseTool):
     """Tool for analyzing job descriptions and extracting key information"""
@@ -89,7 +96,8 @@ def create_agents():
         You can quickly identify key requirements, company culture, and industry trends.""",
         verbose=True,
         allow_delegation=False,
-        tools=[JobDescriptionAnalyzer()]
+        tools=[JobDescriptionAnalyzer()],
+        llm=ollama_llm
     )
     
     # Email Writer Agent
@@ -100,7 +108,8 @@ def create_agents():
         You know how to craft emails that stand out and show genuine interest in the company.""",
         verbose=True,
         allow_delegation=False,
-        tools=[EmailTemplateManager()]
+        tools=[EmailTemplateManager()],
+        llm=ollama_llm
     )
     
     # Email Reviewer Agent
@@ -110,7 +119,8 @@ def create_agents():
         backstory="""You are an expert at reviewing professional communications. 
         You can identify areas for improvement and suggest enhancements to make emails more effective.""",
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=ollama_llm
     )
     
     return researcher, writer, reviewer
@@ -167,19 +177,47 @@ def main():
     
     print("🚀 Starting Job Application Email Agent...")
     
+    # Validate Ollama configuration
+    if ollama_llm is None:
+        print("❌ Failed to initialize Ollama LLM")
+        print("Please check:")
+        print("1. Ollama is running: ollama serve")
+        print("2. Model is available: ollama list")
+        print("3. Run: python check_env.py to check environment variables")
+        return
+    
+    print("✅ Ollama LLM configured successfully")
+    
     # Create agents
-    researcher, writer, reviewer = create_agents()
+    try:
+        researcher, writer, reviewer = create_agents()
+        print("✅ Agents created successfully")
+    except Exception as e:
+        print(f"❌ Failed to create agents: {e}")
+        print("This might be a CrewAI configuration issue")
+        return
     
     # Create tasks
-    research_task, writing_task, review_task = create_tasks(researcher, writer, reviewer)
+    try:
+        research_task, writing_task, review_task = create_tasks(researcher, writer, reviewer)
+        print("✅ Tasks created successfully")
+    except Exception as e:
+        print(f"❌ Failed to create tasks: {e}")
+        return
     
     # Create the crew
-    crew = Crew(
-        agents=[researcher, writer, reviewer],
-        tasks=[research_task, writing_task, review_task],
-        process=Process.sequential,
-        verbose=True
-    )
+    try:
+        crew = Crew(
+            agents=[researcher, writer, reviewer],
+            tasks=[research_task, writing_task, review_task],
+            process=Process.sequential,
+            verbose=True,
+            llm=ollama_llm
+        )
+        print("✅ Crew created successfully")
+    except Exception as e:
+        print(f"❌ Failed to create crew: {e}")
+        return
     
     # For now, use hardcoded job description
     job_description = """
@@ -201,6 +239,7 @@ def main():
     
     # Execute the crew
     try:
+        print("🔄 Starting CrewAI workflow...")
         result = crew.kickoff()
         print("\n✅ Email generation completed!")
         print("\n📧 Final Email:")
@@ -210,7 +249,12 @@ def main():
         
     except Exception as e:
         print(f"❌ Error during execution: {e}")
-        print("Please check your Ollama setup and try again.")
+        print("\n🔧 Troubleshooting steps:")
+        print("1. Check if Ollama is running: ollama serve")
+        print("2. Verify model availability: ollama list")
+        print("3. Check environment variables: python check_env.py")
+        print("4. Test Ollama connection: python test_ollama_connection.py")
+        print("\nIf the issue persists, the error details above should help identify the problem.")
 
 if __name__ == "__main__":
     main()

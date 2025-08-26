@@ -7,7 +7,7 @@ import os
 from crewai import Agent
 from langchain_community.llms import Ollama
 
-def get_ollama_llm(model_name: str = "deepseek-r1:1.5b"):
+def get_ollama_llm(model_name: str = "gemma3:1b"):
     """
     Get an Ollama LLM instance for use with CrewAI agents.
     

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Job Application Email Agent using CrewAI
-This agent helps write personalized job application emails using local Ollama models.
+This agent helps write personalized job application emails using local Ollama models and CV data.
 """
 
 import os
@@ -9,16 +9,29 @@ from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import BaseTool
 from typing import List, Dict, Any
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
+from tools.llm_cv_parser import LLMCVParser
+from tools.personalization_engine import PersonalizationEngine
 
 # Load environment variables
 load_dotenv()
 
 # Configure Ollama LLM
-ollama_llm = Ollama(
+ollama_llm = OllamaLLM(
     model="ollama/gemma3:1b",
     base_url="http://localhost:11434"
 )
+
+# Initialize LLM-based CV parser and personalization engine
+cv_parser = LLMCVParser()
+cv_data = cv_parser.parse_cv()
+
+if cv_data:
+    personalization_engine = PersonalizationEngine(cv_data)
+    print(f"✅ CV loaded: {cv_parser.get_summary()}")
+else:
+    personalization_engine = None
+    print("⚠️  No CV data available - will use generic templates")
 
 class JobDescriptionAnalyzer(BaseTool):
     """Tool for analyzing job descriptions and extracting key information"""
@@ -48,7 +61,8 @@ def create_agents():
         goal='Analyze job descriptions and extract specific information to help a job candidate write a compelling application',
         backstory="""You are an expert at analyzing job descriptions and helping job candidates understand what companies are looking for. 
         You work for job seekers, not companies. Your job is to extract real, specific information from job postings 
-        so candidates can write personalized application emails. You never use placeholder text - you extract actual information.""",
+        so candidates can write personalized application emails. You never use placeholder text - you extract actual information.
+        You also have access to the candidate's CV data to help match their background with job requirements.""",
         verbose=True,
         allow_delegation=False,
         tools=[JobDescriptionAnalyzer()],
@@ -58,12 +72,13 @@ def create_agents():
     # Email Writer Agent
     writer = Agent(
         role='Professional Email Writer for Job Seekers',
-        goal='Write compelling job application emails from the candidate\'s perspective, not the company\'s perspective',
+        goal='Write compelling job application emails from the candidate\'s perspective, using CV data for personalization',
         backstory="""You are a professional email writer who specializes in helping job candidates write application emails. 
         You ALWAYS write from the candidate's perspective - someone applying FOR a job, not someone offering a job. 
         You use real company names, real job titles, and real requirements from the research. 
         You never use placeholder text like [Company Name] or [Job Title].
-        You write complete, professional emails with proper structure and compelling content.""",
+        You write complete, professional emails with proper structure and compelling content.
+        You have access to the candidate's CV data and use it to personalize the email with their actual experience, skills, and background.""",
         verbose=True,
         allow_delegation=False,
         tools=[],  # No tools needed - generate email content directly
@@ -77,7 +92,8 @@ def create_agents():
         backstory="""You are an expert at reviewing job application emails. Your most important job is to ensure the email 
         is written from the CANDIDATE's perspective applying for a job, NOT from the company's perspective hiring someone. 
         You check that all placeholder text has been replaced with real information. If an email is fundamentally wrong, 
-        you rewrite it completely. You ensure the tone is appropriate for someone applying for a position.""",
+        you rewrite it completely. You ensure the tone is appropriate for someone applying for a position.
+        You also verify that the email effectively uses the candidate's CV information for personalization.""",
         verbose=True,
         allow_delegation=False,
         llm=ollama_llm
@@ -94,13 +110,19 @@ def create_tasks(researcher, writer, reviewer):
         
         Job Description: {job_description}
         
+        CANDIDATE CV INFORMATION:
+        {cv_summary}
+        
         Your task is to:
         1. Extract the job title, company name, and key requirements
         2. Identify the company culture and industry
         3. Determine what skills and experience are most important
         4. Find key selling points that would make a candidate attractive
+        5. Analyze how well the candidate's CV matches the job requirements
+        6. Identify specific talking points based on the candidate's background
         
-        Be specific and extract actual information from the job description, not placeholder text.""",
+        Be specific and extract actual information from the job description, not placeholder text.
+        Use the CV information to provide personalized insights.""",
         agent=researcher,
         expected_output="""A detailed analysis with specific information:
         - Job Title: [actual job title from description]
@@ -108,7 +130,9 @@ def create_tasks(researcher, writer, reviewer):
         - Key Requirements: [list of actual requirements]
         - Company Culture: [what you can infer about the company]
         - Industry: [what industry this company operates in]
-        - Key Skills Needed: [most important technical and soft skills]"""
+        - Key Skills Needed: [most important technical and soft skills]
+        - CV Match Analysis: [how well candidate's background fits]
+        - Personalized Talking Points: [specific points based on candidate's CV]"""
     )
     
     # Task 2: Write the initial email
@@ -119,15 +143,20 @@ def create_tasks(researcher, writer, reviewer):
         
         Use the research from the previous task to write a personalized job application email.
         
+        CANDIDATE INFORMATION TO USE:
+        {candidate_info}
+        
         The email must:
         1. Be written from the perspective of someone applying for the job
         2. Include the actual company name and job title from the research
         3. Express genuine interest in the specific role and company
-        4. Highlight relevant skills and experience
-        5. Be professional and compelling
-        6. NOT contain placeholder text like [Company Name] or [Job Title]
+        4. Highlight relevant skills and experience from the candidate's CV
+        5. Use the candidate's actual name, background, and achievements
+        6. Be professional and compelling
+        7. NOT contain placeholder text like [Company Name] or [Job Title]
+        8. Include specific examples from the candidate's experience that match the job requirements
         
-        Write a complete email with proper greeting, body, and closing. Use the actual information from the research task.""",
+        Write a complete email with proper greeting, body, and closing. Use the actual information from the research task and the candidate's CV."""
         agent=writer,
         context=[research_task],
         expected_output="""A complete job application email that:
@@ -135,9 +164,10 @@ def create_tasks(researcher, writer, reviewer):
         - Is written from the candidate's perspective
         - Uses actual company and job information
         - Shows genuine interest and enthusiasm
-        - Highlights relevant skills and experience
+        - Highlights relevant skills and experience from the candidate's CV
         - Has a professional tone and structure
-        - Contains NO placeholder text"""
+        - Contains NO placeholder text
+        - Is personalized with the candidate's actual background"""
     )
     
     # Task 3: Review and improve the email
@@ -146,15 +176,21 @@ def create_tasks(researcher, writer, reviewer):
         
         CRITICAL CHECK: Ensure this email is written from the CANDIDATE's perspective applying for a job, NOT from the company's perspective.
         
+        CANDIDATE INFORMATION FOR VERIFICATION:
+        {candidate_info}
+        
         Your task is to:
         1. Verify the email is written as a job application (not a job posting)
         2. Check that all placeholder text has been replaced with actual information
         3. Ensure the tone is appropriate for a job application
-        4. Improve grammar, clarity, and professionalism
-        5. Make sure the email makes sense and flows well
+        4. Verify that the email uses the candidate's actual CV information effectively
+        5. Improve grammar, clarity, and professionalism
+        6. Make sure the email makes sense and flows well
+        7. Ensure personalization is effective and relevant
         
         If the email is fundamentally wrong (wrong perspective, major issues), rewrite it completely.
-        If it's mostly correct, make improvements and corrections.""",
+        If it's mostly correct, make improvements and corrections.
+        Make sure the personalization from the CV data is natural and compelling."""
         agent=reviewer,
         context=[writing_task],
         expected_output="""A final, polished job application email that:
@@ -162,7 +198,9 @@ def create_tasks(researcher, writer, reviewer):
         - Contains no placeholder text
         - Is professional and compelling
         - Has proper grammar and structure
-        - Makes sense as a job application email"""
+        - Makes sense as a job application email
+        - Effectively uses the candidate's CV information for personalization
+        - Is tailored to the specific job and company"""
     )
     
     return research_task, writing_task, review_task
@@ -214,10 +252,34 @@ def main():
     try:
         research_task, writing_task, review_task = create_tasks(researcher, writer, reviewer)
         
-        # Update the research task description with the actual job description
-        research_task.description = research_task.description.format(job_description=job_description)
+        # Prepare CV information for tasks
+        cv_summary = cv_parser.get_summary() if cv_data else "No CV data available"
+        
+        # Prepare candidate information for personalization
+        if personalization_engine:
+            candidate_info = personalization_engine.get_candidate_summary()
+        else:
+            candidate_info = "Generic candidate information"
+        
+        # Update the research task description with the actual job description and CV data
+        research_task.description = research_task.description.format(
+            job_description=job_description,
+            cv_summary=cv_summary
+        )
+        
+        # Update the writing task description with candidate information
+        writing_task.description = writing_task.description.format(
+            candidate_info=candidate_info
+        )
+        
+        # Update the review task description with candidate information
+        review_task.description = review_task.description.format(
+            candidate_info=candidate_info
+        )
         
         print("✅ Tasks created successfully")
+        print(f"📋 CV Summary: {cv_summary}")
+        print(f"👤 Candidate Info: {candidate_info}")
     except Exception as e:
         print(f"❌ Failed to create tasks: {e}")
         return

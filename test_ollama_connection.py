@@ -27,10 +27,10 @@ def test_ollama_service():
 def test_crewai_ollama_integration():
     """Test CrewAI Ollama integration"""
     try:
-        from langchain_community.llms import Ollama
+        from langchain_ollama import OllamaLLM
         
         print("🔍 Testing CrewAI Ollama integration...")
-        llm = Ollama(
+        llm = OllamaLLM(
             model="ollama/gemma3:1b",
             base_url="http://localhost:11434"
         )
@@ -46,11 +46,11 @@ def test_agent_creation():
     """Test if we can create CrewAI agents with Ollama"""
     try:
         from crewai import Agent
-        from langchain_community.llms import Ollama
+        from langchain_ollama import OllamaLLM
         
         print("🔍 Testing agent creation with Ollama...")
         
-        llm = Ollama(
+        llm = OllamaLLM(
             model="ollama/gemma3:1b",
             base_url="http://localhost:11434"
         )

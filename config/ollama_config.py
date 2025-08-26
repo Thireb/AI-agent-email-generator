@@ -5,7 +5,7 @@ Configures the local Ollama models for use with the job application email agent.
 
 import os
 from crewai import Agent
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
 
 def get_ollama_llm(model_name: str = "ollama/gemma3:1b"):
     """
@@ -18,7 +18,7 @@ def get_ollama_llm(model_name: str = "ollama/gemma3:1b"):
         Ollama: Configured LangChain Ollama LLM instance
     """
     try:
-        llm = Ollama(
+        llm = OllamaLLM(
             model=model_name,
             base_url="http://localhost:11434"  # Default Ollama URL
         )

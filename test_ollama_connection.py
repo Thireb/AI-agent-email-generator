@@ -31,7 +31,7 @@ def test_crewai_ollama_integration():
         
         print("🔍 Testing CrewAI Ollama integration...")
         llm = Ollama(
-            model="ollama/deepseek-r1:1.5b",
+            model="ollama/gemma3:1b",
             base_url="http://localhost:11434"
         )
         
@@ -51,7 +51,7 @@ def test_agent_creation():
         print("🔍 Testing agent creation with Ollama...")
         
         llm = Ollama(
-            model="ollama/deepseek-r1:1.5b",
+            model="ollama/gemma3:1b",
             base_url="http://localhost:11434"
         )
         

@@ -16,7 +16,7 @@ load_dotenv()
 
 # Configure Ollama LLM
 ollama_llm = Ollama(
-    model="ollama/deepseek-r1:1.5b",
+    model="ollama/gemma3:1b",
     base_url="http://localhost:11434"
 )
 
@@ -39,61 +39,16 @@ class JobDescriptionAnalyzer(BaseTool):
             "seniority_level": "Mid-level"
         }
 
-class EmailTemplateManager(BaseTool):
-    """Tool for managing and customizing email templates"""
-    
-    name: str = "Email Template Manager"
-    description: str = "Manages email templates and customizes them based on job requirements"
-    
-    def _run(self, template_type: str, customization_data: Dict[str, Any]) -> str:
-        """Return customized email template"""
-        base_templates = {
-            "software_engineer": """
-Dear {hiring_manager},
-
-I am writing to express my strong interest in the {role_title} position at {company}. With my background in {key_skills} and experience in {relevant_experience}, I believe I would be an excellent fit for your team.
-
-{company_specific_paragraph}
-
-{experience_highlight_paragraph}
-
-I am particularly excited about {company}'s work in {industry_focus} and would welcome the opportunity to contribute to your innovative projects.
-
-Thank you for considering my application. I look forward to discussing how I can add value to your team.
-
-Best regards,
-{your_name}
-            """,
-            "data_scientist": """
-Dear {hiring_manager},
-
-I am excited to apply for the {role_title} position at {company}. My expertise in {key_skills} and passion for {industry_focus} align perfectly with your team's mission.
-
-{company_specific_paragraph}
-
-{experience_highlight_paragraph}
-
-I am particularly drawn to {company}'s innovative approach to {industry_focus} and believe my analytical skills would be valuable to your data-driven initiatives.
-
-Thank you for your time and consideration. I look forward to discussing this opportunity further.
-
-Best regards,
-{your_name}
-            """
-        }
-        
-        template = base_templates.get(template_type, base_templates["software_engineer"])
-        return template.format(**customization_data)
-
 def create_agents():
     """Create the CrewAI agents for the job application email system"""
     
     # Job Research Agent
     researcher = Agent(
         role='Job Research Specialist',
-        goal='Analyze job descriptions and research companies to understand requirements and culture',
-        backstory="""You are an expert at analyzing job descriptions and researching companies. 
-        You can quickly identify key requirements, company culture, and industry trends.""",
+        goal='Analyze job descriptions and extract specific information to help a job candidate write a compelling application',
+        backstory="""You are an expert at analyzing job descriptions and helping job candidates understand what companies are looking for. 
+        You work for job seekers, not companies. Your job is to extract real, specific information from job postings 
+        so candidates can write personalized application emails. You never use placeholder text - you extract actual information.""",
         verbose=True,
         allow_delegation=False,
         tools=[JobDescriptionAnalyzer()],
@@ -102,22 +57,27 @@ def create_agents():
     
     # Email Writer Agent
     writer = Agent(
-        role='Professional Email Writer',
-        goal='Write compelling, personalized job application emails based on research',
-        backstory="""You are a professional email writer with expertise in job applications. 
-        You know how to craft emails that stand out and show genuine interest in the company.""",
+        role='Professional Email Writer for Job Seekers',
+        goal='Write compelling job application emails from the candidate\'s perspective, not the company\'s perspective',
+        backstory="""You are a professional email writer who specializes in helping job candidates write application emails. 
+        You ALWAYS write from the candidate's perspective - someone applying FOR a job, not someone offering a job. 
+        You use real company names, real job titles, and real requirements from the research. 
+        You never use placeholder text like [Company Name] or [Job Title].
+        You write complete, professional emails with proper structure and compelling content.""",
         verbose=True,
         allow_delegation=False,
-        tools=[EmailTemplateManager()],
+        tools=[],  # No tools needed - generate email content directly
         llm=ollama_llm
     )
     
     # Email Reviewer Agent
     reviewer = Agent(
-        role='Email Quality Reviewer',
-        goal='Review and improve email drafts to ensure they are professional and compelling',
-        backstory="""You are an expert at reviewing professional communications. 
-        You can identify areas for improvement and suggest enhancements to make emails more effective.""",
+        role='Email Quality Reviewer for Job Applications',
+        goal='Ensure job application emails are written correctly from the candidate\'s perspective and contain no placeholder text',
+        backstory="""You are an expert at reviewing job application emails. Your most important job is to ensure the email 
+        is written from the CANDIDATE's perspective applying for a job, NOT from the company's perspective hiring someone. 
+        You check that all placeholder text has been replaced with real information. If an email is fundamentally wrong, 
+        you rewrite it completely. You ensure the tone is appropriate for someone applying for a position.""",
         verbose=True,
         allow_delegation=False,
         llm=ollama_llm
@@ -130,44 +90,79 @@ def create_tasks(researcher, writer, reviewer):
     
     # Task 1: Research the job and company
     research_task = Task(
-        description="""Analyze the provided job description and research the company. 
-        Extract key requirements, understand the company culture, and identify industry trends.
-        Focus on what makes this role and company unique.""",
+        description="""You are a job research specialist. Analyze the provided job description and extract key information.
+        
+        Job Description: {job_description}
+        
+        Your task is to:
+        1. Extract the job title, company name, and key requirements
+        2. Identify the company culture and industry
+        3. Determine what skills and experience are most important
+        4. Find key selling points that would make a candidate attractive
+        
+        Be specific and extract actual information from the job description, not placeholder text.""",
         agent=researcher,
-        expected_output="""A comprehensive analysis including:
-        - Role requirements and responsibilities
-        - Company culture and values
-        - Industry context and trends
-        - Key selling points for the candidate"""
+        expected_output="""A detailed analysis with specific information:
+        - Job Title: [actual job title from description]
+        - Company Name: [actual company name from description]
+        - Key Requirements: [list of actual requirements]
+        - Company Culture: [what you can infer about the company]
+        - Industry: [what industry this company operates in]
+        - Key Skills Needed: [most important technical and soft skills]"""
     )
     
     # Task 2: Write the initial email
     writing_task = Task(
-        description="""Based on the research, write a personalized job application email. 
-        The email should be professional, show genuine interest, and highlight relevant experience.
-        Use appropriate email templates and customize them based on the research findings.""",
+        description="""You are a professional email writer creating a job application email. 
+        
+        IMPORTANT: You are writing as a JOB CANDIDATE applying for a position, NOT as a company hiring someone.
+        
+        Use the research from the previous task to write a personalized job application email.
+        
+        The email must:
+        1. Be written from the perspective of someone applying for the job
+        2. Include the actual company name and job title from the research
+        3. Express genuine interest in the specific role and company
+        4. Highlight relevant skills and experience
+        5. Be professional and compelling
+        6. NOT contain placeholder text like [Company Name] or [Job Title]
+        
+        Write a complete email with proper greeting, body, and closing. Use the actual information from the research task.""",
         agent=writer,
         context=[research_task],
-        expected_output="""A complete, personalized job application email that includes:
-        - Professional greeting and introduction
-        - Clear expression of interest
-        - Relevant experience highlights
-        - Company-specific details
-        - Professional closing"""
+        expected_output="""A complete job application email that:
+        - Has a clear subject line
+        - Is written from the candidate's perspective
+        - Uses actual company and job information
+        - Shows genuine interest and enthusiasm
+        - Highlights relevant skills and experience
+        - Has a professional tone and structure
+        - Contains NO placeholder text"""
     )
     
     # Task 3: Review and improve the email
     review_task = Task(
-        description="""Review the drafted email for quality, professionalism, and effectiveness.
-        Suggest improvements to make it more compelling and professional.
-        Ensure proper grammar, tone, and structure.""",
+        description="""You are an email quality reviewer. Review the drafted job application email.
+        
+        CRITICAL CHECK: Ensure this email is written from the CANDIDATE's perspective applying for a job, NOT from the company's perspective.
+        
+        Your task is to:
+        1. Verify the email is written as a job application (not a job posting)
+        2. Check that all placeholder text has been replaced with actual information
+        3. Ensure the tone is appropriate for a job application
+        4. Improve grammar, clarity, and professionalism
+        5. Make sure the email makes sense and flows well
+        
+        If the email is fundamentally wrong (wrong perspective, major issues), rewrite it completely.
+        If it's mostly correct, make improvements and corrections.""",
         agent=reviewer,
         context=[writing_task],
-        expected_output="""An improved version of the email with:
-        - Grammar and spelling corrections
-        - Enhanced clarity and flow
-        - Professional tone improvements
-        - Specific suggestions for enhancement"""
+        expected_output="""A final, polished job application email that:
+        - Is written from the candidate's perspective
+        - Contains no placeholder text
+        - Is professional and compelling
+        - Has proper grammar and structure
+        - Makes sense as a job application email"""
     )
     
     return research_task, writing_task, review_task
@@ -188,6 +183,24 @@ def main():
     
     print("✅ Ollama LLM configured successfully")
     
+    # Define the job description
+    job_description = """
+    Software Engineer - Full Stack
+    TechCorp Inc.
+    
+    We are looking for a talented Full Stack Software Engineer to join our growing team.
+    Requirements:
+    - 3+ years of experience in software development
+    - Proficiency in Python, JavaScript, and React
+    - Experience with cloud platforms (AWS preferred)
+    - Strong problem-solving skills
+    - Team player with excellent communication skills
+    
+    We offer a fast-paced startup environment with opportunities for growth and learning.
+    """
+    
+    print(f"📋 Job Description: {job_description[:100]}...")
+    
     # Create agents
     try:
         researcher, writer, reviewer = create_agents()
@@ -197,9 +210,13 @@ def main():
         print("This might be a CrewAI configuration issue")
         return
     
-    # Create tasks
+    # Create tasks with job description context
     try:
         research_task, writing_task, review_task = create_tasks(researcher, writer, reviewer)
+        
+        # Update the research task description with the actual job description
+        research_task.description = research_task.description.format(job_description=job_description)
+        
         print("✅ Tasks created successfully")
     except Exception as e:
         print(f"❌ Failed to create tasks: {e}")
@@ -219,27 +236,10 @@ def main():
         print(f"❌ Failed to create crew: {e}")
         return
     
-    # For now, use hardcoded job description
-    job_description = """
-    Software Engineer - Full Stack
-    TechCorp Inc.
-    
-    We are looking for a talented Full Stack Software Engineer to join our growing team.
-    Requirements:
-    - 3+ years of experience in software development
-    - Proficiency in Python, JavaScript, and React
-    - Experience with cloud platforms (AWS preferred)
-    - Strong problem-solving skills
-    - Team player with excellent communication skills
-    
-    We offer a fast-paced startup environment with opportunities for growth and learning.
-    """
-    
-    print(f"📋 Analyzing job description: {job_description[:100]}...")
-    
     # Execute the crew
     try:
         print("🔄 Starting CrewAI workflow...")
+        print("\n📋 Step 1: Researching job description...")
         result = crew.kickoff()
         print("\n✅ Email generation completed!")
         print("\n📧 Final Email:")

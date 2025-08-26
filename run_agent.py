@@ -45,12 +45,12 @@ def main():
         models = response.json().get("models", [])
         model_names = [model["name"] for model in models]
         
-        if "deepseek-r1:1.5b" in model_names:
-            print("✅ deepseek-r1:1.5b model is available")
+        if "gemma3:1b" in model_names:
+            print("✅ gemma3:1b model is available")
         else:
-            print("⚠️  deepseek-r1:1.5b model not found")
+            print("⚠️  gemma3:1b model not found")
             print("Available models:", ", ".join(model_names))
-            print("You can pull it with: ollama pull deepseek-r1:1.5b")
+            print("You can pull it with: ollama pull gemma3:1b")
             print("Or modify config/ollama_config.py to use a different model")
     except Exception as e:
         print(f"⚠️  Could not check model availability: {e}")

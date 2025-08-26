@@ -156,7 +156,7 @@ def create_tasks(researcher, writer, reviewer):
         7. NOT contain placeholder text like [Company Name] or [Job Title]
         8. Include specific examples from the candidate's experience that match the job requirements
         
-        Write a complete email with proper greeting, body, and closing. Use the actual information from the research task and the candidate's CV."""
+        Write a complete email with proper greeting, body, and closing. Use the actual information from the research task and the candidate's CV.""",
         agent=writer,
         context=[research_task],
         expected_output="""A complete job application email that:
@@ -190,7 +190,7 @@ def create_tasks(researcher, writer, reviewer):
         
         If the email is fundamentally wrong (wrong perspective, major issues), rewrite it completely.
         If it's mostly correct, make improvements and corrections.
-        Make sure the personalization from the CV data is natural and compelling."""
+        Make sure the personalization from the CV data is natural and compelling.""",
         agent=reviewer,
         context=[writing_task],
         expected_output="""A final, polished job application email that:

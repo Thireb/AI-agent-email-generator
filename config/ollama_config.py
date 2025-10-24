@@ -7,7 +7,7 @@ import os
 from crewai import Agent
 from langchain_ollama import OllamaLLM
 
-def get_ollama_llm(model_name: str = "ollama/gemma3:1b"):
+def get_ollama_llm(model_name: str = "ollama/mistral:latest"):
     """
     Get an Ollama LLM instance for use with CrewAI agents.
     
@@ -62,6 +62,7 @@ AVAILABLE_MODELS = [
     "ollama/all-minilm:latest",     # 45MB model - very fast but limited capability
     "ollama/nomic-embed-text:latest", # 274MB embedding model
     "ollama/mxbai-embed-large:latest" # 669MB embedding model
+    "ollama/mistral:latest"
 ]
 
 def list_available_models():

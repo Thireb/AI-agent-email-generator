@@ -91,6 +91,10 @@ Run the test script to verify everything is working:
 python test_ollama_connection.py
 ```
 
+### 6. CV Parser
+
+Put CV in CV folder. Accepts PDF and Docs files.
+
 ## 🎯 Usage
 
 ### Basic Usage
